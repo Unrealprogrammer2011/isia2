@@ -1,41 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Islamic Quiz App by umar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A modern, responsive, and accessible Islamic Quiz web app using Supabase backend.">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Islamic Quiz</title>
+  <meta name="description" content="Islamic Quiz — responsive, accessible, Supabase-backed" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>Islamic Quiz</h1>
-    <nav id="user-nav" aria-label="User Menu"></nav>
+    <nav id="user-nav" aria-label="User menu"></nav>
   </header>
 
-  <main>
-    <section id="auth-section"></section>
+  <main class="layout">
+    <section id="left-column">
+      <section id="auth-section"></section>
 
-    <section id="quiz-section" hidden>
-      <div id="quiz-controls" class="quiz-controls">
-        <button id="show-leaderboard" aria-label="Show leaderboard">Leaderboard</button>
-        <button id="restart-quiz" aria-label="Restart quiz">Restart</button>
-      </div>
+      <section id="quiz-section" hidden>
+        <div id="quiz-controls" class="quiz-controls">
+          <button id="restart-quiz" aria-label="Restart quiz">Restart</button>
+        </div>
 
-      <div id="quiz-container" aria-live="polite"></div>
-      <div id="scoreboard" aria-live="polite"></div>
-
-      <section id="leaderboard-section" hidden aria-label="Leaderboard">
-        <h2>Leaderboard</h2>
-        <div id="leaderboard-list" role="list"></div>
-        <button id="close-leaderboard">Close</button>
+        <div id="quiz-container" aria-live="polite"></div>
+        <div id="scoreboard" aria-live="polite"></div>
       </section>
     </section>
+
+    <aside id="right-column" aria-label="Leaderboard">
+      <div class="leaderboard-wrap">
+        <h2>Leaderboard</h2>
+        <div id="leaderboard-list" role="list">Loading…</div>
+        <div id="leaderboard-note" class="muted">Top scores from players</div>
+      </div>
+    </aside>
   </main>
 
   <footer>
-    <small>&copy; 2025 Islamic Quiz Web App. All rights reserved.</small>
+    <small>&copy; 2025 Islamic Quiz Web App</small>
   </footer>
+
   <script type="module" src="./main.js"></script>
 </body>
 </html>
