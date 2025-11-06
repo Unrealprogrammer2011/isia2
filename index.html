@@ -15,9 +15,21 @@
 
   <main>
     <section id="auth-section"></section>
+
     <section id="quiz-section" hidden>
-      <div id="quiz-container"></div>
-      <div id="scoreboard"></div>
+      <div id="quiz-controls" class="quiz-controls">
+        <button id="show-leaderboard" aria-label="Show leaderboard">Leaderboard</button>
+        <button id="restart-quiz" aria-label="Restart quiz">Restart</button>
+      </div>
+
+      <div id="quiz-container" aria-live="polite"></div>
+      <div id="scoreboard" aria-live="polite"></div>
+
+      <section id="leaderboard-section" hidden aria-label="Leaderboard">
+        <h2>Leaderboard</h2>
+        <div id="leaderboard-list" role="list"></div>
+        <button id="close-leaderboard">Close</button>
+      </section>
     </section>
   </main>
 
