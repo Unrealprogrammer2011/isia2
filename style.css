@@ -42,7 +42,7 @@ footer {
 }
 
 main {
-  max-width: 500px;
+  max-width: 700px;
   margin: 2rem auto 1rem auto;
   padding: 1rem;
   background: var(--white);
@@ -54,8 +54,8 @@ button, input[type="submit"] {
   background: var(--accent);
   color: var(--white);
   border: none;
-  padding: 0.75rem 1.3rem;
-  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
   font-size: 1rem;
   letter-spacing: .4px;
   cursor: pointer;
@@ -136,6 +136,32 @@ input[type="text"], input[type="email"], input[type="password"] {
   padding-top: 0.5rem;
 }
 
+.quiz-controls {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+#leaderboard-section {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.leaderboard-item:last-child {
+  border-bottom: none;
+}
+
 @media (max-width: 600px) {
   main {
     max-width: 100%;
@@ -144,5 +170,8 @@ input[type="text"], input[type="email"], input[type="password"] {
   header {
     padding: 1rem 0.5rem;
     border-radius: 0;
+  }
+  .quiz-controls {
+    justify-content: space-between;
   }
 }
