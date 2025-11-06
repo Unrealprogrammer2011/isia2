@@ -1,12 +1,25 @@
-// Handles user login/signup/logout flow with Supabase
+// auth.js — auth helpers and profile upsert
 import { supabase } from './supabase.js';
 
-export async function signup(email, password) {
-  return await supabase.auth.signUp({ email, password });
+// Sign up with optional username (will be stored in user_metadata if provided)
+export async function signup(email, password, username = null) {
+  try {
+    // pass username in user metadata if provided
+    const options = username ? { data: { username } } : undefined;
+    const res = await supabase.auth.signUp({ email, password }, options);
+    return res; // contains data and error (user may need confirmation)
+  } catch (err) {
+    return { error: err };
+  }
 }
 
 export async function login(email, password) {
-  return await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const res = await supabase.auth.signInWithPassword({ email, password });
+    return res;
+  } catch (err) {
+    return { error: err };
+  }
 }
 
 export async function logout() {
@@ -14,12 +27,36 @@ export async function logout() {
 }
 
 export function onAuthStateChange(callback) {
+  // Keep compatibility: call callback(session)
   supabase.auth.onAuthStateChange((_event, session) => {
     callback(session);
   });
 }
 
 export async function getUser() {
-  const { data } = await supabase.auth.getUser();
-  return data?.user;
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data?.user ?? null;
+  } catch (err) {
+    console.warn('getUser failed', err);
+    return null;
+  }
+}
+
+// Upsert a profile row for the user (profiles.id = auth.users.id)
+export async function upsertProfile(user_id, username) {
+  if (!user_id || !username) return null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert([{ id: user_id, username }], { onConflict: ['id'] });
+    if (error) {
+      console.warn('upsertProfile error', error);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error('upsertProfile failed', err);
+    return null;
+  }
 }
