@@ -1,4 +1,4 @@
-// auth.js — auth helpers and profile upsert
+// auth.js — auth helpers and profile upsert/update/get
 import { supabase } from './supabase.js';
 
 // Sign up with optional username (will be stored in user_metadata if provided)
@@ -52,11 +52,34 @@ export async function upsertProfile(user_id, username) {
       .upsert([{ id: user_id, username }], { onConflict: ['id'] });
     if (error) {
       console.warn('upsertProfile error', error);
-      return null;
+      return { error };
     }
-    return data;
+    return { data };
   } catch (err) {
     console.error('upsertProfile failed', err);
+    return { error: err };
+  }
+}
+
+// Fetch profile by user id
+export async function getProfile(user_id) {
+  if (!user_id) return null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user_id)
+      .single();
+    if (error) {
+      // PGRST116 returned when not found; return null
+      if (error?.code === 'PGRST116') return null;
+      console.warn('getProfile error', error);
+      return null;
+    }
+    return data?.username ?? null;
+  } catch (err) {
+    console.error('getProfile threw', err);
     return null;
   }
 }
+// v7
