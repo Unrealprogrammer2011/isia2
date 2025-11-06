@@ -1,6 +1,5 @@
-// main.js — show a post-login "dashboard" so user chooses when to start the quiz.
-// Replaces previous auto-start behavior.
-import { signup, login, logout, onAuthStateChange, getUser } from './auth.js';
+// main.js — dashboard + always-visible leaderboard updated for usernames
+import { signup, login, logout, onAuthStateChange, getUser, upsertProfile } from './auth.js';
 import { fetchQuestions, subscribeQuestions, saveScore, getScore, getLeaderboard } from './quiz.js';
 
 const authSection = document.getElementById('auth-section');
@@ -8,11 +7,7 @@ const quizSection = document.getElementById('quiz-section');
 const quizContainer = document.getElementById('quiz-container');
 const scoreboard = document.getElementById('scoreboard');
 const userNav = document.getElementById('user-nav');
-const leaderboardSection = document.getElementById('leaderboard-section');
 const leaderboardList = document.getElementById('leaderboard-list');
-const showLeaderboardBtn = document.getElementById('show-leaderboard');
-const closeLeaderboardBtn = document.getElementById('close-leaderboard');
-const restartBtn = document.getElementById('restart-quiz');
 
 let user = null;
 let originalQuestions = [];
@@ -20,28 +15,18 @@ let quizQuestions = [];
 let currentQuestion = 0;
 let userScore = 0;
 
-// Utility
-function escapeHtml(text = '') {
-  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-}
-function focusFirstInput() {
-  const input = authSection?.querySelector('input');
-  if (input) input.focus();
-}
+// util
+function escapeHtml(t=''){return String(t).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+function focusFirstInput(){ const i = authSection?.querySelector('input'); if (i) i.focus(); }
 
-// Render the simple user nav (email + logout)
-function renderUserNav(emailOrId) {
+function renderUserNav(emailOrId){
   if (!userNav) return;
-  const display = escapeHtml(emailOrId || 'User');
-  userNav.innerHTML = `
-    <span>Hello, ${display}</span>
-    <button id="logout-btn" aria-label="Sign out">Logout</button>
-  `;
+  userNav.innerHTML = `<span>Hello, ${escapeHtml(emailOrId || 'User')}</span><button id="logout-btn">Logout</button>`;
   const btn = document.getElementById('logout-btn');
-  if (btn) btn.onclick = async () => { await logout(); };
+  if (btn) btn.onclick = async () => await logout();
 }
 
-function renderAuth() {
+function renderAuth(){
   quizSection.hidden = true;
   authSection.hidden = false;
   authSection.innerHTML = `
@@ -67,114 +52,64 @@ function renderAuth() {
   document.getElementById('show-signup').onclick = renderSignup;
 }
 
-function renderSignup() {
-  authSection.hidden = false;
+function renderSignup(){
   quizSection.hidden = true;
+  authSection.hidden = false;
   authSection.innerHTML = `
     <form id="signup-form" autocomplete="on">
-      <h2>Sign Up</h2>
+      <h2>Create Account</h2>
       <div id="error-message"></div>
+      <label>Username:<input type="text" name="username" required minlength="2" maxlength="30" autocomplete="username"></label>
       <label>Email:<input type="email" name="email" required autocomplete="email"></label>
       <label>Password:<input type="password" name="password" required minlength="6" autocomplete="new-password"></label>
-      <input type="submit" value="Create Account">
-      <button type="button" id="show-login">Already have an account?</button>
+      <input type="submit" value="Sign Up">
+      <button type="button" id="show-login">Back to Login</button>
     </form>
   `;
   focusFirstInput();
   document.getElementById('signup-form').onsubmit = async e => {
     e.preventDefault();
+    const username = e.target.username.value.trim();
     const email = e.target.email.value.trim();
     const password = e.target.password.value;
-    const res = await signup(email, password);
+    const res = await signup(email, password, username);
     if (res?.error) {
       authSection.querySelector('#error-message').textContent = res.error.message || JSON.stringify(res.error);
     } else {
-      authSection.querySelector('#error-message').textContent = 'Signed up — check email if verification required. Then log in.';
+      // res may return user (if auto-confirm); otherwise user will sign in after verification
+      authSection.querySelector('#error-message').textContent = 'Signed up. If email verification is required, please confirm then log in.';
     }
   };
   document.getElementById('show-login').onclick = renderAuth;
 }
 
-function renderUserDashboard(email) {
-  // Show a small dashboard — user decides when to start the quiz
-  authSection.hidden = false;
-  quizSection.hidden = true;
-  authSection.innerHTML = `
-    <div id="user-dashboard">
-      <h2>Welcome, ${escapeHtml(email)}</h2>
-      <div style="display:flex;gap:0.6rem;margin-top:0.6rem;">
-        <button id="start-quiz">Start Quiz</button>
-        <button id="view-leaderboard">Leaderboard</button>
-        <button id="logout-btn-dash">Logout</button>
-      </div>
-      <div id="dashboard-note" style="margin-top:0.6rem;color:#666;font-size:0.95rem;">
-        Click "Start Quiz" when you're ready. Use "Leaderboard" to view top scores.
-      </div>
-    </div>
-  `;
-
-  const startBtn = document.getElementById('start-quiz');
-  const viewLbBtn = document.getElementById('view-leaderboard');
-  const logoutDash = document.getElementById('logout-btn-dash');
-
-  startBtn?.addEventListener('click', async () => {
-    // ensure questions are loaded before starting
-    try {
-      authSection.hidden = true;
-      quizSection.hidden = false;
-      if (!originalQuestions.length) {
-        originalQuestions = await fetchQuestions();
-        subscribeQuestions(async () => { originalQuestions = await fetchQuestions(); });
-      }
-      startQuiz();
-    } catch (err) {
-      console.error('Failed to load questions before starting', err);
-      authSection.hidden = false;
-      quizSection.hidden = true;
-      const note = document.getElementById('dashboard-note');
-      if (note) note.textContent = 'Unable to load questions. Try again later.';
-    }
-  });
-
-  viewLbBtn?.addEventListener('click', showLeaderboard);
-  logoutDash?.addEventListener('click', async () => { await logout(); });
-}
-
-// Leaderboard
-async function showLeaderboard() {
-  if (!leaderboardList || !leaderboardSection) return;
-  leaderboardList.innerHTML = 'Loading...';
-  leaderboardSection.hidden = false;
+async function renderLeaderboard() {
+  if (!leaderboardList) return;
+  leaderboardList.innerHTML = 'Loading…';
   try {
     const data = await getLeaderboard(20);
-    leaderboardList.innerHTML = '';
     if (!data.length) {
       leaderboardList.innerHTML = '<p>No scores yet.</p>';
       return;
     }
-    data.forEach((row, i) => {
-      const name = row.email || row.user_id;
+    leaderboardList.innerHTML = '';
+    data.forEach((r, i) => {
       const el = document.createElement('div');
       el.className = 'leaderboard-item';
-      el.innerHTML = `<div>${i + 1}. ${escapeHtml(name)}</div><div>${row.score}</div>`;
+      const name = r.username || r.user_id;
+      el.innerHTML = `<div class="name">${i+1}. ${escapeHtml(name)}</div><div class="score">${r.score}</div>`;
       leaderboardList.appendChild(el);
     });
   } catch (err) {
-    console.error('Leaderboad load error', err);
-    leaderboardList.innerHTML = `<p>Failed to load leaderboard: ${escapeHtml(err.message || String(err))}</p>`;
+    console.error('Leaderboard load failed', err);
+    leaderboardList.innerHTML = `<p class="muted">Unable to load leaderboard</p>`;
   }
 }
-function hideLeaderboard() {
-  if (leaderboardSection) leaderboardSection.hidden = true;
-}
 
-// QUIZ FLOW (start only when user presses Start Quiz)
-function startQuiz() {
-  // shuffle and reset
+function startQuiz(){
   quizQuestions = (originalQuestions || []).slice();
-  // simple shuffle
-  for (let i = quizQuestions.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+  for (let i = quizQuestions.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random()*(i+1));
     [quizQuestions[i], quizQuestions[j]] = [quizQuestions[j], quizQuestions[i]];
   }
   currentQuestion = 0;
@@ -182,138 +117,125 @@ function startQuiz() {
   showQuestion();
 }
 
-function showQuestion() {
-  if (!Array.isArray(quizQuestions) || quizQuestions.length === 0) {
-    if (quizContainer) quizContainer.innerHTML = `<p>No questions available.</p>`;
-    if (scoreboard) scoreboard.textContent = '';
+function showQuestion(){
+  if (!Array.isArray(quizQuestions) || quizQuestions.length === 0){
+    quizContainer.innerHTML = `<p>No questions available.</p>`;
+    scoreboard.textContent = '';
     return;
   }
-  if (currentQuestion >= quizQuestions.length) {
-    if (quizContainer) quizContainer.innerHTML = `<h2>Quiz Finished!</h2>
+  if (currentQuestion >= quizQuestions.length){
+    quizContainer.innerHTML = `<h2>Quiz Finished!</h2>
       <p>Your Score: <strong>${userScore} / ${quizQuestions.length}</strong></p>
       <button id="restart-btn">Play Again</button>
-      <button id="view-leaderboard-cta">View Leaderboard</button>
     `;
-    if (user && user.id) {
-      saveScore(user.id, userScore, user.email).catch(err => console.warn('Unable to save score', err));
-    }
-    const restartBtnEl = document.getElementById('restart-btn');
-    const viewLbCta = document.getElementById('view-leaderboard-cta');
-    restartBtnEl?.addEventListener('click', () => startQuiz());
-    viewLbCta?.addEventListener('click', showLeaderboard);
-    if (scoreboard) scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
+    if (user?.id) saveScore(user.id, userScore).catch(err => console.warn('saveScore', err));
+    document.getElementById('restart-btn')?.addEventListener('click', startQuiz);
+    scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
+    // refresh leaderboard so new score appears
+    renderLeaderboard();
     return;
   }
 
   const q = quizQuestions[currentQuestion];
-  if (quizContainer) {
-    quizContainer.innerHTML = `
-      <div class="quiz-card" tabindex="0">
-        <h3 id="question-${q.id}">Q${currentQuestion + 1}. ${escapeHtml(q.question)}</h3>
-        <div class="quiz-options" role="radiogroup" aria-labelledby="question-${q.id}">
-          ${q.options.map((opt, idx) => `
-            <button class="quiz-option" role="radio" aria-checked="false" data-idx="${idx}" tabindex="${idx === 0 ? '0' : '-1'}">
-              ${escapeHtml(opt)}
-            </button>
-          `).join('')}
-        </div>
+  quizContainer.innerHTML = `
+    <div class="quiz-card" tabindex="0">
+      <h3 id="question-${q.id}">Q${currentQuestion+1}. ${escapeHtml(q.question)}</h3>
+      <div class="quiz-options" role="radiogroup" aria-labelledby="question-${q.id}">
+        ${q.options.map((opt, idx)=>`<button class="quiz-option" role="radio" data-idx="${idx}" tabindex="${idx===0?'0':'-1'}">${escapeHtml(opt)}</button>`).join('')}
       </div>
-    `;
-  }
-  if (scoreboard) scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
-  const optionEls = quizContainer?.querySelectorAll('.quiz-option') || [];
-  optionEls.forEach(btn => {
-    btn.onclick = () => handleAnswer(parseInt(btn.dataset.idx, 10), btn);
-    btn.addEventListener('keydown', e => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-        e.preventDefault();
-        const next = btn.nextElementSibling || optionEls[0];
-        next.focus();
-      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const prev = btn.previousElementSibling || optionEls[optionEls.length - 1];
-        prev.focus();
-      } else if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        btn.click();
-      }
+    </div>
+  `;
+  scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
+  const optionEls = quizContainer.querySelectorAll('.quiz-option');
+  optionEls.forEach(btn=>{
+    btn.onclick = ()=> handleAnswer(parseInt(btn.dataset.idx,10), btn);
+    btn.addEventListener('keydown', e=>{
+      if (e.key==='ArrowDown'||e.key==='ArrowRight'){ e.preventDefault(); (btn.nextElementSibling||optionEls[0]).focus(); }
+      if (e.key==='ArrowUp'||e.key==='ArrowLeft'){ e.preventDefault(); (btn.previousElementSibling||optionEls[optionEls.length-1]).focus(); }
+      if (e.key==='Enter'||e.key===' '){ e.preventDefault(); btn.click(); }
     });
   });
 }
 
-function handleAnswer(selectedIdx, btn) {
+function handleAnswer(selectedIdx, btn){
   const q = quizQuestions[currentQuestion];
   const correct = selectedIdx === q.answer;
   btn.classList.add(correct ? 'correct' : 'incorrect');
-  btn.setAttribute('aria-checked', 'true');
+  btn.setAttribute('aria-checked','true');
   if (correct) userScore += 1;
-  if (scoreboard) scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
-  setTimeout(() => {
-    currentQuestion += 1;
-    showQuestion();
-  }, 700);
+  scoreboard.innerHTML = `Score: <span>${userScore}</span> / ${quizQuestions.length}`;
+  setTimeout(()=>{ currentQuestion += 1; showQuestion(); }, 700);
 }
 
 // Initialization
-async function startApp() {
-  // wire small UI buttons
-  showLeaderboardBtn?.addEventListener('click', showLeaderboard);
-  closeLeaderboardBtn?.addEventListener('click', hideLeaderboard);
-  restartBtn?.addEventListener('click', () => {
-    if (originalQuestions.length) startQuiz();
-  });
+async function startApp(){
+  // preload leaderboard
+  await renderLeaderboard();
 
-  // IMPORTANT: the auth helper calls our callback with a single "session" param.
+  // listen for auth state changes
   onAuthStateChange(async (session) => {
-    // session may be null when logged out
-    user = session?.user || null;
+    user = session?.user ?? null;
     if (!user) {
       renderAuth();
-      if (userNav) userNav.innerHTML = '';
+      renderUserNav('Guest');
     } else {
-      // Show dashboard, do not auto-start quiz
-      renderUserNav(user.email || user.id);
-      renderUserDashboard(user.email || user.id);
-      // Preload questions silently so Start is fast
+      // if username was provided during signup, ensure profile exists
+      const username = user.user_metadata?.username ?? null;
+      if (username) {
+        try { await upsertProfile(user.id, username); } catch (err) { console.warn('upsertProfile', err); }
+      }
+      // load questions in background
       try {
         originalQuestions = await fetchQuestions();
-        subscribeQuestions(async () => {
-          originalQuestions = await fetchQuestions();
-        });
+        subscribeQuestions(async ()=> { originalQuestions = await fetchQuestions(); });
       } catch (err) {
-        console.warn('Preload questions failed', err);
+        console.warn('loadQuestions', err);
       }
+
+      // render a simple dashboard (choose when to start)
+      renderUserNav(user.email || user.id);
+      authSection.hidden = false;
+      quizSection.hidden = true;
+      authSection.innerHTML = `
+        <div style="padding:12px">
+          <h2>Welcome, ${escapeHtml(user.user_metadata?.username || user.email || user.id)}</h2>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="start-quiz-btn">Start Quiz</button>
+            <button id="view-lb-btn">Refresh Leaderboard</button>
+            <button id="logout-btn-small">Logout</button>
+          </div>
+          <div style="margin-top:10px;color:#666" id="dashboard-note">Click Start Quiz when you are ready.</div>
+        </div>
+      `;
+      document.getElementById('start-quiz-btn')?.addEventListener('click', ()=> {
+        authSection.hidden = true; quizSection.hidden = false; startQuiz();
+      });
+      document.getElementById('view-lb-btn')?.addEventListener('click', ()=> renderLeaderboard());
+      document.getElementById('logout-btn-small')?.addEventListener('click', async ()=> await logout());
+      // show best score if exists
       try {
-        const prevScore = await getScore(user.id);
-        if (prevScore > 0) {
-          // show best score on the dashboard if needed
+        const best = await getScore(user.id);
+        if (best > 0) {
           const note = document.getElementById('dashboard-note');
-          if (note) note.innerHTML = `Best score: <strong>${prevScore}</strong>. Click "Start Quiz" when ready.`;
-          else if (scoreboard) scoreboard.innerHTML += `<br><em>Best score: ${prevScore}</em>`;
+          if (note) note.innerHTML = `Best score: <strong>${best}</strong>. Click Start Quiz when ready.`;
         }
-      } catch (err) { console.warn('getScore failed', err); }
+      } catch (err) { console.warn('getScore', err); }
     }
   });
 
-  // On page load, try to get existing session but DO NOT auto-start quiz.
-  try {
-    user = await getUser(); // getUser returns the user object or null
-  } catch (err) {
-    console.warn('getUser failed', err);
-    user = null;
-  }
-
+  // try existing session on load
+  user = await getUser();
   if (!user) renderAuth();
   else {
     renderUserNav(user.email || user.id);
-    // show dashboard
-    renderUserDashboard(user.email || user.id);
-    try {
-      originalQuestions = await fetchQuestions();
-    } catch (err) {
-      console.warn('Failed to load questions on startup', err);
-    }
+    authSection.hidden = false;
+    quizSection.hidden = true;
+    authSection.innerHTML = `<p style="padding:12px">Welcome back. Use the dashboard to start the quiz or view the leaderboard.</p>`;
+    try { originalQuestions = await fetchQuestions(); } catch (err) { console.warn('loadQuestions on boot', err); }
   }
+
+  // refresh leaderboard every 30s
+  setInterval(() => renderLeaderboard(), 30_000);
 }
 
 startApp();
