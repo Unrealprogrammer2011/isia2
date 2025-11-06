@@ -1,18 +1,20 @@
-// Quiz logic using Supabase database + realtime subscriptions
+// quiz.js — Supabase DB functions for questions, scores, leaderboard
 import { supabase } from './supabase.js';
 
 export async function fetchQuestions() {
-  // Returns the array of quiz questions from DB
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from('questions')
     .select('*')
-    .order('id');
-  if (error) throw error;
-  return data;
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('fetchQuestions error', error);
+    throw error;
+  }
+  return data || [];
 }
 
 export function subscribeQuestions(callback) {
-  // Subscribes to questions table, receives new data in realtime
   return supabase
     .channel('public:questions')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'questions' }, payload => {
@@ -21,19 +23,46 @@ export function subscribeQuestions(callback) {
     .subscribe();
 }
 
-export async function saveScore(user_id, score) {
-  // Upserts score for the current user
-  const { error } = await supabase
+// Upsert score with user email (email column must exist in scores table)
+export async function saveScore(user_id, score, email = null) {
+  if (!user_id) throw new Error('Missing user_id');
+  const payload = { user_id, score, email };
+  const { data, error } = await supabase
     .from('scores')
-    .upsert([{ user_id, score }], { onConflict: ['user_id'] });
-  if (error) throw error;
+    .upsert([payload], { onConflict: ['user_id'] });
+  if (error) {
+    console.error('saveScore error', error);
+    throw error;
+  }
+  return data;
 }
+
 export async function getScore(user_id) {
+  if (!user_id) return 0;
   const { data, error } = await supabase
     .from('scores')
     .select('score')
     .eq('user_id', user_id)
     .single();
-  if (error || !data) return 0;
-  return data.score;
+
+  if (error && error.code !== 'PGRST116') { // single returns PGRST116 if not found
+    console.error('getScore error', error);
+    return 0;
+  }
+  return data?.score ?? 0;
+}
+
+// Leaderboard: top N scores (returns array of {user_id, email, score})
+export async function getLeaderboard(limit = 10) {
+  const { data, error } = await supabase
+    .from('scores')
+    .select('user_id, score, email')
+    .order('score', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('getLeaderboard error', error);
+    throw error;
+  }
+  return data || [];
 }
