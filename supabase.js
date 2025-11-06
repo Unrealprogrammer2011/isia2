@@ -1,4 +1,4 @@
-// ES module for Supabase client initialization
+// Supabase client - configured for your project
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 export const SUPABASE_URL = "https://pbyfdgzfuwhohliippbz.supabase.co";
