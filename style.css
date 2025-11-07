@@ -1,44 +1,46 @@
 /* ============================================================
-   QUIZ APP STYLE — Deluxe Edition
-   ✦ Elegant ✦ Responsive ✦ Accessible ✦ Dark-Mode Aware ✦
+   ISLAMIC QUIZ APP — Deluxe Design System
+   ✦ Elegant ✦ Spiritual ✦ Responsive ✦ Accessible ✦
    ============================================================ */
 
 :root {
   /* Brand Palette */
   --primary: #143a2a;
   --accent: #2cc985;
-  --accent-dark: #26b178;
-  --muted: #768579;
-  --bg: #f3faf5;
-  --bg-glass: rgba(255, 255, 255, 0.6);
+  --accent-dark: #23a972;
+  --muted: #7c897f;
+  --bg: #f4faf7;
+  --bg-gradient: linear-gradient(180deg, #f6fbf8 0%, #e8f5ee 100%);
+  --bg-glass: rgba(255, 255, 255, 0.7);
   --card: #ffffff;
   --white: #ffffff;
   --error: #d64545;
-  --success: #32d77e;
+  --success: #33d17a;
   --radius: 14px;
-  --gap: 18px;
+  --gap: 20px;
   --transition: 200ms ease;
   --shadow: 0 8px 24px rgba(20, 58, 42, 0.08);
   --blur: 10px;
-  --font-body: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: 'Poppins', var(--font-body);
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Poppins", var(--font-body);
 }
 
-/* Dark Mode */
+/* ================= Dark Mode ================= */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1914;
+    --bg: #0e1713;
+    --bg-gradient: linear-gradient(180deg, #0e1713 0%, #14241b 100%);
     --bg-glass: rgba(24, 40, 32, 0.45);
     --card: #182820;
     --primary: #eaf6ef;
     --muted: #98a89f;
-    --accent: #38d996;
-    --accent-dark: #2bbd84;
-    --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    --accent: #39da97;
+    --accent-dark: #2cc686;
+    --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
   }
 }
 
-/* ========== Reset & Base ========== */
+/* ================= Base Reset ================= */
 *,
 *::before,
 *::after {
@@ -50,11 +52,13 @@ html, body {
   margin: 0;
   height: 100%;
   font-family: var(--font-body);
-  background: var(--bg);
+  background: var(--bg-gradient);
   color: var(--primary);
   -webkit-font-smoothing: antialiased;
   line-height: 1.6;
 }
+
+img { max-width: 100%; display: block; }
 
 a {
   color: var(--accent);
@@ -63,31 +67,35 @@ a {
 }
 a:hover { color: var(--accent-dark); }
 
-/* ========== Header ========== */
+/* ================= Header ================= */
 header {
   background: var(--primary);
   color: var(--white);
-  padding: 18px 24px;
+  padding: 18px 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 header h1 {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-weight: 600;
+  font-size: 1.4rem;
   margin: 0;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 nav#user-nav {
   font-size: 0.95rem;
   opacity: 0.9;
 }
 
-/* ========== Layout ========== */
+/* ================= Layout ================= */
 main.layout {
-  max-width: 1080px;
+  max-width: 1100px;
   margin: 32px auto;
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -95,17 +103,17 @@ main.layout {
   padding: 0 18px;
 }
 
-/* ========== Left (Quiz Area) ========== */
+/* ================= Left Column ================= */
 #left-column {
   background: var(--bg-glass);
   border-radius: var(--radius);
-  padding: 22px;
+  padding: 24px;
   backdrop-filter: blur(var(--blur));
   box-shadow: var(--shadow);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-/* ========== Right (Leaderboard) ========== */
+/* ================= Right Column ================= */
 #right-column {
   position: sticky;
   top: 100px;
@@ -115,16 +123,16 @@ main.layout {
 .leaderboard-wrap {
   background: var(--bg-glass);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
   backdrop-filter: blur(var(--blur));
   box-shadow: var(--shadow);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .leaderboard-wrap h2 {
   margin: 0 0 12px;
-  font-size: 1.1rem;
   font-family: var(--font-display);
+  font-size: 1.15rem;
 }
 
 .leaderboard-item {
@@ -138,12 +146,8 @@ main.layout {
 .leaderboard-item:hover {
   background: rgba(42, 169, 122, 0.06);
 }
-.leaderboard-item:last-child {
-  border-bottom: none;
-}
-.leaderboard-item .name {
-  font-weight: 600;
-}
+.leaderboard-item:last-child { border-bottom: none; }
+.leaderboard-item .name { font-weight: 600; }
 .leaderboard-item .score {
   color: var(--muted);
   font-weight: 700;
@@ -154,21 +158,21 @@ main.layout {
   margin-top: 8px;
 }
 
-/* ========== Quiz Cards ========== */
+/* ================= Quiz Cards ================= */
 .quiz-card {
   background: var(--card);
   border-radius: var(--radius);
   padding: 18px 20px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 .quiz-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(20, 58, 42, 0.1);
 }
 
-/* ========== Quiz Options ========== */
+/* ================= Quiz Options ================= */
 .quiz-options {
   display: flex;
   flex-direction: column;
@@ -219,7 +223,7 @@ main.layout {
   outline-offset: 3px;
 }
 
-/* ========== Buttons ========== */
+/* ================= Buttons ================= */
 button,
 input[type="submit"] {
   background: var(--accent);
@@ -245,7 +249,15 @@ button.secondary:hover {
   background: rgba(42,169,122,0.15);
 }
 
-/* ========== Spinner ========== */
+/* ================= Quiz Controls ================= */
+.quiz-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+
+/* ================= Spinner ================= */
 .spinner {
   width: 24px;
   height: 24px;
@@ -254,11 +266,19 @@ button.secondary:hover {
   border-top-color: var(--accent);
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================= Footer ================= */
+footer {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  margin-top: 40px;
 }
 
-/* ========== Motion & Theme Transitions ========== */
+/* ================= Motion & Transitions ================= */
 @media (prefers-reduced-motion: no-preference) {
   * {
     transition:
@@ -269,7 +289,7 @@ button.secondary:hover {
   }
 }
 
-/* ========== Responsive ========== */
+/* ================= Responsive ================= */
 @media (max-width: 900px) {
   main.layout {
     grid-template-columns: 1fr 280px;
@@ -284,8 +304,6 @@ button.secondary:hover {
   #right-column {
     position: relative;
     top: 0;
-    margin-top: 16px;
+    margin-top: 18px;
   }
 }
-
-
